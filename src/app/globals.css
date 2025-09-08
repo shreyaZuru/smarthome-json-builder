@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.light-card-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(168px, 336px));
+  max-width: 700px;
+  gap: 8px;
+  flex-grow: 1;
+}
+
+.light-card-wrapper {
+  min-width: 170px;
+}
+
+.light-card-wrapper:last-child:nth-child(odd) {
+  grid-column: span 2;
+}
+
+.door-card-wrapper {
+  margin-bottom: 16px;
+  width: 678px;
+}
+
+@media (max-width: 768px) {
+  .light-card-container {
+    grid-template-columns: 1fr;
+  }
+}
