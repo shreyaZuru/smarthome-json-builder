@@ -57,7 +57,7 @@ export const AppProvider = ({ children }) => {
     const fetchData = async () => {
       try {
         const response = await fetch(
-          "http://10.40.1.4:3008/project/983399104480051190/json"
+          "https://dev-proxy.zurutech.online/smarthome-public/demo/project/983399104480051190/json"
         );
         const data = await response.json();
         console.log("Fetched device data:", data);
@@ -336,13 +336,16 @@ export const AppProvider = ({ children }) => {
         }
       }
 
-      fetch("http://10.40.1.4:3008/project/983399104480051190", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(dcJson),
-      })
+      fetch(
+        "https://dev-proxy.zurutech.online/smarthome-public/demo/project/983399104480051190",
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(dcJson),
+        }
+      )
         .then((response) => response.json())
         .then((data) => {
           if (data.code === "OK") {
