@@ -1,9 +1,19 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
+import Toast from "./Toast";
 
 const DeviceItem = ({ name, count, subItems, onCountChange, maxDevices }) => {
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+
   const handleIncrement = () => {
-    if (count >= maxDevices) return;
+    if (count >= maxDevices) {
+      setToastMessage(
+        `Maximum ${maxDevices} ${name.toLowerCase()} allowed. Please remove one to add a new device.`
+      );
+      setShowToast(true);
+      return;
+    }
     onCountChange(count + 1);
   };
 
@@ -37,6 +47,9 @@ const DeviceItem = ({ name, count, subItems, onCountChange, maxDevices }) => {
       </div>
       {subItems && <ul className="ml-2 mt-2"></ul>}
       <p className="text-sm">Selected: {count}</p>
+      {showToast && (
+        <Toast message={toastMessage} onClose={() => setShowToast(false)} />
+      )}
     </li>
   );
 };
