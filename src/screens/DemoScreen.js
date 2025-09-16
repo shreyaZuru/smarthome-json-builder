@@ -8,7 +8,7 @@ import StickyDrawer from "@component/StickyDrawer";
 import { useAppData, lightTypeList, doorTypeList } from "@context/AppContext";
 
 const DemoScreen = () => {
-  const { devices, handleNameChange, handleSubmit } = useAppData();
+  const { devices, hasChanges, handleNameChange, handleSubmit } = useAppData();
 
   const lightDevices = useMemo(
     () => devices.filter((device) => lightTypeList.includes(device.type)),
@@ -101,15 +101,15 @@ const DemoScreen = () => {
         >
           <button
             style={{
-              backgroundColor: isAnySelected ? "#3B82F6" : "#394046",
-              color: isAnySelected ? "white" : "grey",
+              backgroundColor: hasChanges ? "#3B82F6" : "#394046",
+              color: hasChanges ? "white" : "grey",
               border: "none",
               borderRadius: 20,
               padding: "10px 20px",
-              cursor: "pointer",
+              cursor: hasChanges ? "pointer" : "not-allowed",
             }}
             onClick={handleSubmit}
-            disabled={!isAnySelected}
+            disabled={!hasChanges}
           >
             Submit
           </button>

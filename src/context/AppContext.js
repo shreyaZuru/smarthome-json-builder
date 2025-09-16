@@ -1,6 +1,12 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useMemo,
+} from "react";
 import AlertBox from "@component/AlertBox";
 
 const initialDevices = [
@@ -9,14 +15,22 @@ const initialDevices = [
     status: "Off",
     count: 0,
     type: "non_dimmable_light",
+    maxDevices: 20,
   },
-  { name: "Dimmable lights", status: "Off", count: 0, type: "dimmable_light" },
+  {
+    name: "Dimmable lights",
+    status: "Off",
+    count: 0,
+    type: "dimmable_light",
+    maxDevices: 20,
+  },
   {
     name: "2 Panel sliding door",
     status: "Closed",
     count: 0,
     type: "sliding_door",
     numberOfPanels: 2,
+    maxDevices: 10,
   },
   {
     name: "3 Panel sliding door",
@@ -24,12 +38,14 @@ const initialDevices = [
     count: 0,
     type: "sliding_door",
     numberOfPanels: 3,
+    maxDevices: 10,
   },
   {
     name: "Garage door",
     status: "Closed",
     count: 0,
     type: "garage_door",
+    maxDevices: 1,
   },
   {
     name: "Smart lock",
@@ -37,6 +53,7 @@ const initialDevices = [
     count: 0,
     type: "smart_lock",
     subItems: [],
+    maxDevices: 5,
   },
 ];
 
@@ -49,8 +66,41 @@ export const AppProvider = ({ children }) => {
   const [devices, setDevices] = useState(initialDevices);
   const [alertMessage, setAlertMessage] = useState(null);
   const [dcJson, setDcJson] = useState(null);
+  const [originalDevices, setOriginalDevices] = useState(null);
 
   let deviceId = 0;
+
+  // Compare current devices with original devices to check for changes
+  const hasChanges = useMemo(() => {
+    if (!originalDevices) return false;
+
+    // Compare device counts and contents
+    for (let i = 0; i < devices.length; i++) {
+      const current = devices[i];
+      const original = originalDevices[i];
+
+      // Compare count
+      if (current.count !== original.count) return true;
+
+      // Compare subItems if they exist
+      if (current.subItems && original.subItems) {
+        if (current.subItems.length !== original.subItems.length) return true;
+
+        // Compare each subItem's name and checked status
+        for (let j = 0; j < current.subItems.length; j++) {
+          if (
+            current.subItems[j].name !== original.subItems[j].name ||
+            current.subItems[j].checked !== original.subItems[j].checked
+          ) {
+            return true;
+          }
+        }
+      }
+    }
+
+    // No differences found
+    return false;
+  }, [devices, originalDevices]);
 
   useEffect(() => {
     // Fetch initial device data from the server
@@ -76,6 +126,8 @@ export const AppProvider = ({ children }) => {
           ...smartLockDevices,
         ];
         setDevices(newDevices);
+        // Save a deep copy of original devices for comparison
+        setOriginalDevices(JSON.parse(JSON.stringify(newDevices)));
       } catch (error) {
         console.error("Error fetching device data:", error);
       }
@@ -351,6 +403,8 @@ export const AppProvider = ({ children }) => {
           if (data.code === "OK") {
             setAlertMessage("Dummy home DC json uploaded successfully.");
             deviceId = 0;
+            // Update original devices after successful submit
+            setOriginalDevices(JSON.parse(JSON.stringify(devices)));
           }
         })
         .catch((error) => {
@@ -451,6 +505,7 @@ export const AppProvider = ({ children }) => {
       value={{
         appData: {
           devices,
+          hasChanges,
           handleCountChange,
           handleNameChange,
           handleCheckboxChange,
