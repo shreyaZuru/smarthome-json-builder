@@ -149,6 +149,7 @@ export const AppProvider = ({ children }) => {
       count: 0,
       type: "non_dimmable_light",
       subItems: [],
+      maxDevices: 20,
     };
     const dimmable = {
       name: "Dimmable lights",
@@ -156,6 +157,7 @@ export const AppProvider = ({ children }) => {
       count: 0,
       type: "dimmable_light",
       subItems: [],
+      maxDevices: 20,
     };
     lightingZones.forEach((zone) => {
       const device = lightingDevices.find((d) => d.iD === zone.iD);
@@ -187,6 +189,7 @@ export const AppProvider = ({ children }) => {
       type: "sliding_door",
       numberOfPanels: 2,
       subItems: [],
+      maxDevices: 10,
     };
     const threePanel = {
       name: "3 Panel sliding door",
@@ -195,6 +198,7 @@ export const AppProvider = ({ children }) => {
       type: "sliding_door",
       numberOfPanels: 3,
       subItems: [],
+      maxDevices: 10,
     };
     slidingDoorDevices.forEach((device) => {
       const item = {
@@ -222,6 +226,7 @@ export const AppProvider = ({ children }) => {
       count: 0,
       type: "garage_door",
       subItems: [],
+      maxDevices: 1,
     };
     garageDoorController.forEach((device) => {
       garageDoor.subItems.push({
@@ -244,6 +249,7 @@ export const AppProvider = ({ children }) => {
       count: 0,
       type: "smart_lock",
       subItems: [],
+      maxDevices: 5,
     };
     lockingControllers.forEach((device) => {
       // Check if a doorbell exists for this lock
