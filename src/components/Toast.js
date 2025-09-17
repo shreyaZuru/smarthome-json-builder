@@ -11,10 +11,15 @@ const Toast = ({ message, duration = 3000, onClose }) => {
   }, [duration, onClose]);
 
   return (
-    <div className="fixed bottom-20 right-4 z-[1001] flex items-center justify-center">
-      <div className="bg-[#0B283D] text-white px-4 py-2 rounded-md shadow-lg">
-        {message}
-      </div>
+    <div className="bg-[#2F0E03] text-white px-6 py-3 rounded-xl shadow-lg flex items-center justify-between">
+      <div className="flex-grow text-center">{message}</div>
+      <button
+        onClick={onClose}
+        className="ml-3 text-white hover:text-gray-300"
+        aria-label="Close toast"
+      >
+        ✕
+      </button>
     </div>
   );
 };

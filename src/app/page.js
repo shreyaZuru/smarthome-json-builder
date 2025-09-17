@@ -1,10 +1,13 @@
 import { AppProvider } from "../context/AppContext";
+import { ToastProvider } from "../context/ToastContext";
 import DemoScreen from "../screens/DemoScreen";
 
 export default function Home() {
   return (
-    <AppProvider>
-      <DemoScreen />
-    </AppProvider>
+    <ToastProvider>
+      <AppProvider>
+        <DemoScreen />
+      </AppProvider>
+    </ToastProvider>
   );
 }
