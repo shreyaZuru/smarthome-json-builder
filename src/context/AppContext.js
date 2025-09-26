@@ -110,7 +110,7 @@ export const AppProvider = ({ children }) => {
           "https://dev-proxy.zurutech.online/smarthome-public/demo/project/983399104480051190/json"
         );
         const data = await response.json();
-        console.log("Fetched device data:", data);
+
         let tempDcJson = { ...data };
         // Extract devices from dcJson
         const lightDevices = extractLightDevices(tempDcJson);
@@ -333,93 +333,45 @@ export const AppProvider = ({ children }) => {
     );
   };
 
-  const handleSubmit = () => {
-    try {
-      let roomId = 5000;
-
-      let dcJson = {
-        projectId: "983399104480051190",
-        projectName: "Dummy Home",
-        projectRooms: {
-          rooms: [
-            {
-              iD: roomId,
-              displayName: "Room",
-              floorId: 0,
-            },
-          ],
-        },
-        smartBuildingSystems: {
-          lightingSystem: {
-            lightingGroups: [],
-            lightingZones: [],
-            lightingDevices: [],
-          },
-          openingSystem: {
-            slidingDoorDevices: [],
-          },
-        },
-        smartSwitches: [
-          {
-            iD: 1001,
-            displayName: "Smart Switch",
-            roomId: 5000,
-          },
-        ],
-        smartBuildingDevices: {
-          garageDoorController: [],
-          lockingControllers: [],
-          doorbells: [],
-        },
-      };
-      for (let deviceTypeData of devices) {
-        switch (deviceTypeData.type) {
-          case "non_dimmable_light":
-            addLightData(dcJson, deviceTypeData, false);
-            break;
-          case "dimmable_light":
-            addLightData(dcJson, deviceTypeData, true);
-            break;
-          case "sliding_door":
-            addSlidingDoorData(dcJson, deviceTypeData);
-            break;
-          case "garage_door":
-            addGarageDoorData(dcJson, deviceTypeData);
-            break;
-          case "smart_lock":
-            addSmartLockData(dcJson, deviceTypeData);
-            break;
-          default:
-            break;
-        }
-      }
-
-      fetch(
-        "https://dev-proxy.zurutech.online/smarthome-public/demo/project/983399104480051190",
+  const createEmptyHomeJSON = () => ({
+    projectId: "983399104480051190",
+    projectName: "Dummy Home",
+    projectRooms: {
+      rooms: [
         {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(dcJson),
-        }
-      )
-        .then((response) => response.json())
-        .then((data) => {
-          if (data.code === "OK") {
-            setAlertMessage("Dummy home DC json uploaded successfully.");
-            deviceId = 0;
-            // Update original devices after successful submit
-            setOriginalDevices(JSON.parse(JSON.stringify(devices)));
-          }
-        })
-        .catch((error) => {
-          console.error("API error:", error);
-        });
-    } catch (error) {
-      console.error("error in api", error);
-    }
-  };
+          iD: 5000,
+          displayName: "Room",
+          floorId: 0,
+        },
+      ],
+    },
+  });
+
+  const createInitialDcJson = () => ({
+    ...createEmptyHomeJSON(),
+    smartBuildingSystems: {
+      lightingSystem: {
+        lightingGroups: [],
+        lightingZones: [],
+        lightingDevices: [],
+      },
+      openingSystem: {
+        slidingDoorDevices: [],
+      },
+    },
+    smartSwitches: [
+      {
+        iD: 1001,
+        displayName: "Smart Switch",
+        roomId: 5000,
+      },
+    ],
+    smartBuildingDevices: {
+      garageDoorController: [],
+      lockingControllers: [],
+      doorbells: [],
+    },
+  });
 
   const addLightData = (dcJson, deviceData, isDimmable) => {
     deviceData.subItems?.map((item) => {
@@ -504,6 +456,53 @@ export const AppProvider = ({ children }) => {
         });
       }
     });
+  };
+
+  const handleSubmit = async ({ clearAll = false } = {}) => {
+    try {
+      const payload = clearAll ? createEmptyHomeJSON() : createInitialDcJson();
+      if (!clearAll) {
+        const deviceHandlers = {
+          non_dimmable_light: (dcJson, data) =>
+            addLightData(dcJson, data, false),
+          dimmable_light: (dcJson, data) => addLightData(dcJson, data, true),
+          sliding_door: addSlidingDoorData,
+          garage_door: addGarageDoorData,
+          smart_lock: addSmartLockData,
+        };
+        devices.forEach((device) => {
+          const handler = deviceHandlers[device.type];
+          if (handler) {
+            handler(payload, device);
+          }
+        });
+      }
+
+      const response = await fetch(
+        "https://dev-proxy.zurutech.online/smarthome-public/demo/project/983399104480051190",
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const data = await response.json();
+      if (data.code === "OK") {
+        setAlertMessage("Dummy home DC json uploaded successfully.");
+        deviceId = 0;
+        if (clearAll) {
+          setOriginalDevices(initialDevices);
+          setDevices(initialDevices);
+        } else {
+          setOriginalDevices(JSON.parse(JSON.stringify(devices)));
+        }
+      }
+    } catch (error) {
+      console.error("Error in handleSubmit:", error);
+    }
   };
 
   return (
