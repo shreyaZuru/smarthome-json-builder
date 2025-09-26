@@ -491,7 +491,11 @@ export const AppProvider = ({ children }) => {
 
       const data = await response.json();
       if (data.code === "OK") {
-        setAlertMessage("Dummy home DC json uploaded successfully.");
+        setAlertMessage(
+          `Dummy home DC json ${
+            clearAll ? "cleared" : "uploaded"
+          } successfully.`
+        );
         deviceId = 0;
         if (clearAll) {
           setOriginalDevices(initialDevices);
