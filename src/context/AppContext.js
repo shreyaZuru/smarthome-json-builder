@@ -439,6 +439,7 @@ export const AppProvider = ({ children }) => {
       dcJson.smartBuildingSystems.lightingSystem.lightingGroups.push({
         iD: currentDeviceId,
         displayName: item.name,
+        isFeatured: true,
         lightingZoneIds: [currentDeviceId],
       });
     });
@@ -457,8 +458,8 @@ export const AppProvider = ({ children }) => {
         isFeatured: true,
         panels: deviceData.numberOfPanels,
         dimension: {
-          w: 3675,
-          h: 2690,
+          width: 3675,
+          height: 2690,
         },
       });
     });
@@ -476,8 +477,8 @@ export const AppProvider = ({ children }) => {
         roomId: 5000,
         isFeatured: true,
         dimension: {
-          w: 3275,
-          h: 2675,
+          width: 3275,
+          height: 2675,
         },
       });
     });
