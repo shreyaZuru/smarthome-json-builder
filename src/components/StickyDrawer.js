@@ -21,6 +21,9 @@ const StickyDrawer = () => {
   const [editingRoomId, setEditingRoomId] = useState(null);
   const [editingName, setEditingName] = useState("");
   const [showEditAlert, setShowEditAlert] = useState(false);
+  const [deletingRoomId, setDeletingRoomId] = useState(null);
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [showClearAllAlert, setShowClearAllAlert] = useState(false);
 
   const handleRoomSelect = (roomId) => {
     setCurrentRoomId(roomId);
@@ -55,6 +58,36 @@ const StickyDrawer = () => {
     setEditingRoomId(null);
     setEditingName("");
     setShowEditAlert(false);
+  };
+
+  const handleDeleteRoom = (roomId) => {
+    setDeletingRoomId(roomId);
+    setShowDeleteAlert(true);
+    setIsDropdownOpen(false);
+  };
+
+  const handleConfirmDelete = () => {
+    deleteRoom(deletingRoomId);
+    setDeletingRoomId(null);
+    setShowDeleteAlert(false);
+  };
+
+  const handleCancelDelete = () => {
+    setDeletingRoomId(null);
+    setShowDeleteAlert(false);
+  };
+
+  const handleClearAll = () => {
+    setShowClearAllAlert(true);
+  };
+
+  const handleConfirmClearAll = () => {
+    handleSubmit({ clearAll: true });
+    setShowClearAllAlert(false);
+  };
+
+  const handleCancelClearAll = () => {
+    setShowClearAllAlert(false);
   };
 
   const getCurrentRoom = () => {
@@ -107,7 +140,7 @@ const StickyDrawer = () => {
                             e.stopPropagation();
                             handleEditRoom(room.id, room.name);
                           }}
-                          className="text-xs text-gray-500 hover:text-gray-300 p-1"
+                          className="text-xs text-gray-500 hover:text-gray-300 p-1 cursor-pointer"
                         >
                           ✏
                         </button>
@@ -115,9 +148,9 @@ const StickyDrawer = () => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              deleteRoom(room.id);
+                              handleDeleteRoom(room.id);
                             }}
-                            className="text-xs text-red-500 hover:text-red-300 p-1"
+                            className="text-xs text-red-500 hover:text-red-300 p-1 cursor-pointer"
                           >
                             ✕
                           </button>
@@ -171,13 +204,13 @@ const StickyDrawer = () => {
               ) : (
                 <button
                   onClick={() => setIsAdding(true)}
-                  disabled={rooms.length >= 10}
+                  disabled={rooms.length >= 5}
                   className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-500 text-white font-medium rounded-md transition-colors flex items-center justify-center gap-2"
                 >
                   <span>+</span>
                   <span>Add Room</span>
-                  {rooms.length >= 10 && (
-                    <span className="text-xs">(Max 10)</span>
+                  {rooms.length >= 5 && (
+                    <span className="text-xs">(Max 5)</span>
                   )}
                 </button>
               )}
@@ -194,7 +227,7 @@ const StickyDrawer = () => {
       <div className="mt-6">
         <button
           className="w-full py-2 px-4 bg-red-600 hover:bg-red-700 text-white font-medium rounded-md transition-colors"
-          onClick={() => handleSubmit({ clearAll: true })}
+          onClick={handleClearAll}
         >
           Clear All
         </button>
@@ -235,6 +268,53 @@ const StickyDrawer = () => {
               }}
             />
           }
+        />
+      )}
+
+      {/* Delete Room AlertBox */}
+      {showDeleteAlert && (
+        <AlertBox
+          title="Delete Room"
+          message={`Are you sure you want to delete "${rooms.find((r) => r.id === deletingRoomId)?.name}"? All devices in this room will be removed.`}
+          buttons={[
+            {
+              label: "Cancel",
+              onClick: handleCancelDelete,
+              className:
+                "bg-[#30343c] text-white border-none rounded-lg py-3 px-6  font-semibold text-[17px] cursor-pointer shadow-sm hover:bg-[#363a43]",
+              disabled: false,
+              ariaLabel: "Cancel action",
+            },
+            {
+              label: "Delete",
+              onClick: handleConfirmDelete,
+              className:
+                "bg-red-600 hover:bg-red-700 text-white py-3 px-6 rounded-lg cursor-pointer",
+            },
+          ]}
+        />
+      )}
+
+      {/* Clear All AlertBox */}
+      {showClearAllAlert && (
+        <AlertBox
+          title="Clear All"
+          message="Are you sure you want to clear all rooms and devices? This action cannot be undone."
+          buttons={[
+            {
+              label: "Cancel",
+              onClick: handleCancelClearAll,
+              className:
+                "bg-[#30343c] text-white border-none rounded-lg py-3 px-6 font-semibold text-[17px] cursor-pointer shadow-sm hover:bg-[#363a43]",
+              ariaLabel: "Cancel clear all",
+            },
+            {
+              label: "Clear All",
+              onClick: handleConfirmClearAll,
+              className:
+                "bg-red-600 hover:bg-red-700 text-white py-3 px-6 rounded-lg cursor-pointer font-semibold text-[17px]",
+            },
+          ]}
         />
       )}
     </aside>

@@ -6,10 +6,6 @@ const DeviceItem = ({ name, count, subItems, onCountChange, maxDevices }) => {
   const { showToast } = useToast();
 
   const handleIncrement = () => {
-    if (count >= maxDevices) {
-      showToast(`Maximum limit reached for ${name.toLowerCase()}.`);
-      return;
-    }
     onCountChange(count + 1);
   };
 

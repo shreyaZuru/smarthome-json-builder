@@ -343,6 +343,127 @@ export const AppProvider = ({ children }) => {
   }
 
   const handleCountChange = (deviceDetails, newCount) => {
+    // Validate combined limits across ALL rooms before allowing the change
+
+    // Check for combined light limits across all rooms (non_dimmable_light + dimmable_light <= 40)
+    if (lightTypeList.includes(deviceDetails.type)) {
+      let totalLights = 0;
+      rooms.forEach((room) => {
+        room.devices.forEach((device) => {
+          if (lightTypeList.includes(device.type)) {
+            // If this is the device being changed, use newCount, otherwise use current count
+            if (
+              room.id === currentRoomId &&
+              device.name === deviceDetails.name
+            ) {
+              totalLights += newCount;
+            } else {
+              totalLights += device.count;
+            }
+          }
+        });
+      });
+
+      if (totalLights > 40) {
+        const currentTotal =
+          totalLights -
+          newCount +
+          (currentRoom.devices.find((d) => d.name === deviceDetails.name)
+            ?.count || 0);
+        setAlertMessage(
+          `Total lights (dimmable + non-dimmable) across all rooms cannot exceed 40.`,
+        );
+        return;
+      }
+    }
+
+    // Check for combined sliding door limits across all rooms (2 panel + 3 panel <= 20)
+    if (deviceDetails.type === "sliding_door") {
+      let totalSlidingDoors = 0;
+      rooms.forEach((room) => {
+        room.devices.forEach((device) => {
+          if (device.type === "sliding_door") {
+            // If this is the device being changed, use newCount, otherwise use current count
+            if (
+              room.id === currentRoomId &&
+              device.name === deviceDetails.name
+            ) {
+              totalSlidingDoors += newCount;
+            } else {
+              totalSlidingDoors += device.count;
+            }
+          }
+        });
+      });
+
+      if (totalSlidingDoors > 20) {
+        const currentTotal =
+          totalSlidingDoors -
+          newCount +
+          (currentRoom.devices.find((d) => d.name === deviceDetails.name)
+            ?.count || 0);
+        setAlertMessage(
+          `Total sliding doors (2 panel + 3 panel) across all rooms cannot exceed 20.`,
+        );
+        return;
+      }
+    }
+
+    // Check garage door limit across all rooms (max 1)
+    if (deviceDetails.type === "garage_door") {
+      let totalGarageDoors = 0;
+      rooms.forEach((room) => {
+        room.devices.forEach((device) => {
+          if (device.type === "garage_door") {
+            // If this is the device being changed, use newCount, otherwise use current count
+            if (
+              room.id === currentRoomId &&
+              device.name === deviceDetails.name
+            ) {
+              totalGarageDoors += newCount;
+            } else {
+              totalGarageDoors += device.count;
+            }
+          }
+        });
+      });
+
+      if (totalGarageDoors > 1) {
+        setAlertMessage("Maximum 1 garage door allowed across all rooms.");
+        return;
+      }
+    }
+
+    // Check smart lock limit across all rooms (max 5)
+    if (deviceDetails.type === "smart_lock") {
+      let totalSmartLocks = 0;
+      rooms.forEach((room) => {
+        room.devices.forEach((device) => {
+          if (device.type === "smart_lock") {
+            // If this is the device being changed, use newCount, otherwise use current count
+            if (
+              room.id === currentRoomId &&
+              device.name === deviceDetails.name
+            ) {
+              totalSmartLocks += newCount;
+            } else {
+              totalSmartLocks += device.count;
+            }
+          }
+        });
+      });
+
+      if (totalSmartLocks > 5) {
+        const currentTotal =
+          totalSmartLocks -
+          newCount +
+          (currentRoom.devices.find((d) => d.name === deviceDetails.name)
+            ?.count || 0);
+        setAlertMessage(`Total smart locks across all rooms cannot exceed 5.`);
+        return;
+      }
+    }
+
     setRooms((prevRooms) =>
       prevRooms.map((room) =>
         room.id === currentRoomId
@@ -404,6 +525,28 @@ export const AppProvider = ({ children }) => {
   };
 
   const handleCheckboxChange = (deviceDetails, index, isChecked) => {
+    // Validate doorbell limit (only 1 doorbell allowed across all rooms)
+    if (deviceDetails.type === "smart_lock" && isChecked) {
+      // Count all checked doorbells across all rooms
+      let totalCheckedDoorbells = 0;
+      rooms.forEach((room) => {
+        room.devices.forEach((device) => {
+          if (device.type === "smart_lock" && device.subItems) {
+            totalCheckedDoorbells += device.subItems.filter(
+              (item) => item.checked,
+            ).length;
+          }
+        });
+      });
+
+      if (totalCheckedDoorbells >= 1) {
+        setAlertMessage(
+          "Only 1 doorbell is allowed across all rooms. Please uncheck the existing doorbell first.",
+        );
+        return;
+      }
+    }
+
     setRooms((prevRooms) =>
       prevRooms.map((room) =>
         room.id === currentRoomId
@@ -432,8 +575,8 @@ export const AppProvider = ({ children }) => {
 
   // Room management functions
   const addRoom = (roomName) => {
-    if (rooms.length >= 10) {
-      setAlertMessage("Maximum 10 rooms allowed.");
+    if (rooms.length >= 5) {
+      setAlertMessage("Maximum 5 rooms allowed.");
       return;
     }
     const newRoomId = Math.max(...rooms.map((r) => r.id), 0) + 1;
