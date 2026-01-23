@@ -9,7 +9,7 @@ import React, {
 } from "react";
 import AlertBox from "@component/AlertBox";
 
-const initialDevices = [
+const createInitialDevices = () => [
   {
     name: "Non-dimmable lights",
     status: "Off",
@@ -57,42 +57,82 @@ const initialDevices = [
   },
 ];
 
+const createInitialRooms = () => [
+  {
+    id: 1,
+    name: "Living Room",
+    devices: createInitialDevices(),
+  },
+];
+
 export const lightTypeList = ["non_dimmable_light", "dimmable_light"];
 export const doorTypeList = ["sliding_door", "garage_door"];
 
 const AppContext = createContext();
 
+let lightGroupId = 1; // 1-100
+let slidingDoorId = 101; // 101-200
+let garageDoorId = 201; // 201-300
+let smartLockId = 301; // 301-400
+let doorbellId = 401; // 401-500
+
+const resetDeviceIds = () => {
+  lightGroupId = 1;
+  slidingDoorId = 101;
+  garageDoorId = 201;
+  smartLockId = 301;
+  doorbellId = 401;
+};
+
 export const AppProvider = ({ children }) => {
-  const [devices, setDevices] = useState(initialDevices);
+  const [rooms, setRooms] = useState(createInitialRooms());
+  const [currentRoomId, setCurrentRoomId] = useState(1);
   const [alertMessage, setAlertMessage] = useState(null);
   const [dcJson, setDcJson] = useState(null);
-  const [originalDevices, setOriginalDevices] = useState(null);
+  const [originalRooms, setOriginalRooms] = useState(null);
 
-  let deviceId = 0;
+  // Get current room and its devices
+  const currentRoom = useMemo(() => {
+    return rooms.find((room) => room.id === currentRoomId) || rooms[0];
+  }, [rooms, currentRoomId]);
 
-  // Compare current devices with original devices to check for changes
+  const devices = currentRoom?.devices || [];
+
+  // Compare current rooms with original rooms to check for changes
   const hasChanges = useMemo(() => {
-    if (!originalDevices) return false;
+    if (!originalRooms) return false;
 
-    // Compare device counts and contents
-    for (let i = 0; i < devices.length; i++) {
-      const current = devices[i];
-      const original = originalDevices[i];
+    // Compare room count
+    if (rooms.length !== originalRooms.length) return true;
 
-      // Compare count
-      if (current.count !== original.count) return true;
+    // Compare each room
+    for (let roomIndex = 0; roomIndex < rooms.length; roomIndex++) {
+      const currentRoom = rooms[roomIndex];
+      const originalRoom = originalRooms[roomIndex];
 
-      // Compare subItems if they exist
-      if (current.subItems && original.subItems) {
-        if (current.subItems.length !== original.subItems.length) return true;
+      // Compare room name
+      if (currentRoom.name !== originalRoom.name) return true;
 
-        // Compare each subItem's name and checked status
-        for (let j = 0; j < current.subItems.length; j++) {
-          if (
-            current.subItems[j].name !== original.subItems[j].name ||
-            current.subItems[j].checked !== original.subItems[j].checked
-          ) {
-            return true;
+      // Compare device counts and contents
+      for (let i = 0; i < currentRoom.devices.length; i++) {
+        const current = currentRoom.devices[i];
+        const original = originalRoom.devices[i];
+
+        // Compare count
+        if (current.count !== original.count) return true;
+
+        // Compare subItems if they exist
+        if (current.subItems && original.subItems) {
+          if (current.subItems.length !== original.subItems.length) return true;
+
+          // Compare each subItem's name and checked status
+          for (let j = 0; j < current.subItems.length; j++) {
+            if (
+              current.subItems[j].name !== original.subItems[j].name ||
+              current.subItems[j].checked !== original.subItems[j].checked
+            ) {
+              return true;
+            }
           }
         }
       }
@@ -100,34 +140,62 @@ export const AppProvider = ({ children }) => {
 
     // No differences found
     return false;
-  }, [devices, originalDevices]);
+  }, [rooms, originalRooms]);
 
   useEffect(() => {
     // Fetch initial device data from the server
     const fetchData = async () => {
       try {
         const response = await fetch(
-          "https://dev-proxy.zurutech.online/smarthome-public/demo/project/983399104480051190/json"
+          "https://dev-proxy.zurutech.online/smarthome-public/demo/project/983399104480051190/json",
         );
         const data = await response.json();
 
         let tempDcJson = { ...data };
-        // Extract devices from dcJson
-        const lightDevices = extractLightDevices(tempDcJson);
-        const slidingDoorDevices = extractSlidingDoorDevices(tempDcJson);
-        const garageDoorDevices = extractGarageDoorDevices(tempDcJson);
-        const smartLockDevices = extractSmartLockDevices(tempDcJson);
+        const roomsFromServer = data?.projectRooms?.rooms || [];
 
-        // Compose devices array in the same order as initialDevices
-        const newDevices = [
-          ...lightDevices,
-          ...slidingDoorDevices,
-          ...garageDoorDevices,
-          ...smartLockDevices,
-        ];
-        setDevices(newDevices);
-        // Save a deep copy of original devices for comparison
-        setOriginalDevices(JSON.parse(JSON.stringify(newDevices)));
+        let newRooms;
+        if (roomsFromServer.length === 0) {
+          // If no rooms from server, use initial rooms
+          newRooms = createInitialRooms();
+        } else {
+          // Create rooms from server data
+          newRooms = roomsFromServer.map((serverRoom, index) => {
+            // Extract devices for each room from dcJson
+            const lightDevices = extractLightDevices(tempDcJson, serverRoom.iD);
+            const slidingDoorDevices = extractSlidingDoorDevices(
+              tempDcJson,
+              serverRoom.iD,
+            );
+            const garageDoorDevices = extractGarageDoorDevices(
+              tempDcJson,
+              serverRoom.iD,
+            );
+            const smartLockDevices = extractSmartLockDevices(
+              tempDcJson,
+              serverRoom.iD,
+            );
+
+            // Compose devices array in the same order as initialDevices
+            const roomDevices = [
+              ...lightDevices,
+              ...slidingDoorDevices,
+              ...garageDoorDevices,
+              ...smartLockDevices,
+            ];
+
+            return {
+              id: serverRoom.iD,
+              name: serverRoom.displayName,
+              devices: roomDevices,
+            };
+          });
+        }
+
+        setRooms(newRooms);
+        setCurrentRoomId(newRooms[0]?.id || 1);
+        // Save a deep copy of original rooms for comparison
+        setOriginalRooms(JSON.parse(JSON.stringify(newRooms)));
       } catch (error) {
         console.error("Error fetching device data:", error);
       }
@@ -137,7 +205,7 @@ export const AppProvider = ({ children }) => {
   }, []);
 
   // Reverse functions to extract devices from dcJson
-  function extractLightDevices(dcJson) {
+  function extractLightDevices(dcJson, roomId = 5000) {
     const lightingDevices =
       dcJson?.smartBuildingSystems?.lightingSystem?.lightingDevices || [];
     const lightingZones =
@@ -160,7 +228,9 @@ export const AppProvider = ({ children }) => {
       maxDevices: 20,
     };
     lightingZones.forEach((zone) => {
-      const device = lightingDevices.find((d) => d.iD === zone.iD);
+      const device = lightingDevices.find(
+        (d) => d.iD === zone.iD && d.roomId === roomId,
+      );
       if (!device) return;
       const item = {
         name: device.displayName,
@@ -178,7 +248,7 @@ export const AppProvider = ({ children }) => {
     return [nonDimmable, dimmable];
   }
 
-  function extractSlidingDoorDevices(dcJson) {
+  function extractSlidingDoorDevices(dcJson, roomId = 5000) {
     const slidingDoorDevices =
       dcJson?.smartBuildingSystems?.openingSystem?.slidingDoorDevices || [];
     // Group by numberOfPanels
@@ -200,24 +270,26 @@ export const AppProvider = ({ children }) => {
       subItems: [],
       maxDevices: 10,
     };
-    slidingDoorDevices.forEach((device) => {
-      const item = {
-        name: device.displayName,
-        type: "checkbox",
-        checked: false,
-      };
-      if (device.panels === 2) {
-        twoPanel.subItems.push(item);
-      } else if (device.panels === 3) {
-        threePanel.subItems.push(item);
-      }
-    });
+    slidingDoorDevices
+      .filter((device) => device.roomId === roomId)
+      .forEach((device) => {
+        const item = {
+          name: device.displayName,
+          type: "checkbox",
+          checked: false,
+        };
+        if (device.panels === 2) {
+          twoPanel.subItems.push(item);
+        } else if (device.panels === 3) {
+          threePanel.subItems.push(item);
+        }
+      });
     twoPanel.count = twoPanel.subItems.length;
     threePanel.count = threePanel.subItems.length;
     return [twoPanel, threePanel];
   }
 
-  function extractGarageDoorDevices(dcJson) {
+  function extractGarageDoorDevices(dcJson, roomId = 5000) {
     const garageDoorController =
       dcJson?.smartBuildingDevices?.garageDoorController || [];
     const garageDoor = {
@@ -228,18 +300,20 @@ export const AppProvider = ({ children }) => {
       subItems: [],
       maxDevices: 1,
     };
-    garageDoorController.forEach((device) => {
-      garageDoor.subItems.push({
-        name: device.displayName,
-        type: "checkbox",
-        checked: false,
+    garageDoorController
+      .filter((device) => device.roomId === roomId)
+      .forEach((device) => {
+        garageDoor.subItems.push({
+          name: device.displayName,
+          type: "checkbox",
+          checked: false,
+        });
       });
-    });
     garageDoor.count = garageDoor.subItems.length;
     return [garageDoor];
   }
 
-  function extractSmartLockDevices(dcJson) {
+  function extractSmartLockDevices(dcJson, roomId = 5000) {
     const lockingControllers =
       dcJson?.smartBuildingDevices?.lockingControllers || [];
     const doorbells = dcJson?.smartBuildingDevices?.doorbells || [];
@@ -251,85 +325,144 @@ export const AppProvider = ({ children }) => {
       subItems: [],
       maxDevices: 5,
     };
-    lockingControllers.forEach((device) => {
-      // Check if a doorbell exists for this lock
-      const hasDoorbell = doorbells.some(
-        (bell) => bell.smartLockId === device.iD
-      );
-      smartLock.subItems.push({
-        name: device.displayName,
-        type: "checkbox",
-        checked: hasDoorbell,
+    lockingControllers
+      .filter((device) => device.roomId === roomId)
+      .forEach((device) => {
+        // Check if a doorbell exists for this lock
+        const hasDoorbell = doorbells.some(
+          (bell) => bell.smartLockId === device.iD,
+        );
+        smartLock.subItems.push({
+          name: device.displayName,
+          type: "checkbox",
+          checked: hasDoorbell,
+        });
       });
-    });
     smartLock.count = smartLock.subItems.length;
     return [smartLock];
   }
 
   const handleCountChange = (deviceDetails, newCount) => {
-    setDevices((prevDevices) =>
-      prevDevices.map((device) => {
-        if (device.name === deviceDetails.name) {
-          let subItems = device.subItems ? [...device.subItems] : [];
-          const currentCount = subItems.length;
+    setRooms((prevRooms) =>
+      prevRooms.map((room) =>
+        room.id === currentRoomId
+          ? {
+              ...room,
+              devices: room.devices.map((device) => {
+                if (device.name === deviceDetails.name) {
+                  let subItems = device.subItems ? [...device.subItems] : [];
+                  const currentCount = subItems.length;
 
-          if (newCount > currentCount) {
-            // Push new subItems
-            for (let i = currentCount; i < newCount; i++) {
-              subItems.push({
-                name: `${device.name} ${i + 1}`,
-                type: "checkbox",
-                checked: false,
-              });
+                  if (newCount > currentCount) {
+                    // Push new subItems
+                    for (let i = currentCount; i < newCount; i++) {
+                      subItems.push({
+                        name: `${device.name} ${i + 1}`,
+                        type: "checkbox",
+                        checked: false,
+                      });
+                    }
+                  } else if (newCount < currentCount) {
+                    // Pop subItems
+                    subItems = subItems.slice(0, newCount);
+                  }
+
+                  return { ...device, count: newCount, subItems };
+                }
+                return device;
+              }),
             }
-          } else if (newCount < currentCount) {
-            // Pop subItems
-            subItems = subItems.slice(0, newCount);
-          }
-
-          return { ...device, count: newCount, subItems };
-        }
-        return device;
-      })
+          : room,
+      ),
     );
   };
   const handleNameChange = (deviceDetails, index, newName) => {
-    setDevices((prevDevices) =>
-      prevDevices.map((device) =>
-        deviceDetails.name === device.name
+    setRooms((prevRooms) =>
+      prevRooms.map((room) =>
+        room.id === currentRoomId
           ? {
-              ...device,
-              subItems: device.subItems.map((subItem, subIndex) =>
-                subIndex === index
+              ...room,
+              devices: room.devices.map((device) =>
+                deviceDetails.name === device.name
                   ? {
-                      ...subItem,
-                      name: newName,
+                      ...device,
+                      subItems: device.subItems.map((subItem, subIndex) =>
+                        subIndex === index
+                          ? {
+                              ...subItem,
+                              name: newName,
+                            }
+                          : subItem,
+                      ),
                     }
-                  : subItem
+                  : device,
               ),
             }
-          : device
-      )
+          : room,
+      ),
     );
   };
 
   const handleCheckboxChange = (deviceDetails, index, isChecked) => {
-    setDevices((prevDevices) =>
-      prevDevices.map((device) =>
-        device.name === deviceDetails.name
+    setRooms((prevRooms) =>
+      prevRooms.map((room) =>
+        room.id === currentRoomId
           ? {
-              ...device,
-              subItems: device.subItems.map((subItem, subIndex) =>
-                subIndex === index
+              ...room,
+              devices: room.devices.map((device) =>
+                device.name === deviceDetails.name
                   ? {
-                      ...subItem,
-                      checked: isChecked,
+                      ...device,
+                      subItems: device.subItems.map((subItem, subIndex) =>
+                        subIndex === index
+                          ? {
+                              ...subItem,
+                              checked: isChecked,
+                            }
+                          : subItem,
+                      ),
                     }
-                  : subItem
+                  : device,
               ),
             }
-          : device
-      )
+          : room,
+      ),
+    );
+  };
+
+  // Room management functions
+  const addRoom = (roomName) => {
+    if (rooms.length >= 10) {
+      setAlertMessage("Maximum 10 rooms allowed.");
+      return;
+    }
+    const newRoomId = Math.max(...rooms.map((r) => r.id), 0) + 1;
+    const newRoom = {
+      id: newRoomId,
+      name: roomName,
+      devices: createInitialDevices(),
+    };
+    setRooms((prev) => [...prev, newRoom]);
+    setCurrentRoomId(newRoomId);
+  };
+
+  const deleteRoom = (roomId) => {
+    if (rooms.length <= 1) {
+      setAlertMessage("At least one room is required.");
+      return;
+    }
+    setRooms((prev) => prev.filter((room) => room.id !== roomId));
+    if (currentRoomId === roomId) {
+      const remainingRooms = rooms.filter((room) => room.id !== roomId);
+      setCurrentRoomId(remainingRooms[0]?.id || 1);
+    }
+  };
+
+  const editRoomName = (roomId, newName) => {
+    setRooms((prev) =>
+      prev.map((room) =>
+        room.id === roomId ? { ...room, name: newName } : room,
+      ),
     );
   };
 
@@ -337,13 +470,11 @@ export const AppProvider = ({ children }) => {
     projectId: "983399104480051190",
     projectName: "Dummy Home",
     projectRooms: {
-      rooms: [
-        {
-          iD: 5000,
-          displayName: "Room",
-          floorId: 0,
-        },
-      ],
+      rooms: rooms.map((room, index) => ({
+        iD: room.id,
+        displayName: room.name,
+        floorId: 0,
+      })),
     },
   });
 
@@ -359,13 +490,11 @@ export const AppProvider = ({ children }) => {
         slidingDoorDevices: [],
       },
     },
-    smartSwitches: [
-      {
-        iD: 1001,
-        displayName: "Smart Switch",
-        roomId: 5000,
-      },
-    ],
+    smartSwitches: rooms.map((room, index) => ({
+      iD: 1000 + room.id,
+      displayName: `Smart Switch - ${room.name}`,
+      roomId: room.id,
+    })),
     smartBuildingDevices: {
       garageDoorController: [],
       lockingControllers: [],
@@ -373,13 +502,13 @@ export const AppProvider = ({ children }) => {
     },
   });
 
-  const addLightData = (dcJson, deviceData, isDimmable) => {
+  const addLightData = (dcJson, deviceData, isDimmable, roomId) => {
     deviceData.subItems?.map((item) => {
-      let currentDeviceId = ++deviceId;
+      let currentDeviceId = lightGroupId++;
       dcJson.smartBuildingSystems.lightingSystem.lightingDevices.push({
         iD: currentDeviceId,
         displayName: item.name,
-        roomId: 5000,
+        roomId: roomId,
         isFeatured: true,
       });
       dcJson.smartBuildingSystems.lightingSystem.lightingZones.push({
@@ -397,16 +526,13 @@ export const AppProvider = ({ children }) => {
     });
   };
 
-  const addSlidingDoorData = (dcJson, deviceData) => {
-    if (deviceId < 100) {
-      deviceId = 100;
-    }
+  const addSlidingDoorData = (dcJson, deviceData, roomId) => {
     deviceData.subItems?.map((item) => {
-      let currentDeviceId = ++deviceId;
+      let currentDeviceId = slidingDoorId++;
       dcJson.smartBuildingSystems.openingSystem.slidingDoorDevices.push({
         iD: currentDeviceId,
         displayName: item.name,
-        roomId: 5000,
+        roomId: roomId,
         isFeatured: true,
         panels: deviceData.numberOfPanels,
         dimension: {
@@ -417,16 +543,13 @@ export const AppProvider = ({ children }) => {
     });
   };
 
-  const addGarageDoorData = (dcJson, deviceData) => {
-    if (deviceId < 200) {
-      deviceId = 200;
-    }
+  const addGarageDoorData = (dcJson, deviceData, roomId) => {
     deviceData.subItems?.map((item) => {
-      let currentDeviceId = ++deviceId;
+      let currentDeviceId = garageDoorId++;
       dcJson.smartBuildingDevices.garageDoorController.push({
         iD: currentDeviceId,
         displayName: item.name,
-        roomId: 5000,
+        roomId: roomId,
         isFeatured: true,
         dimension: {
           width: 3275,
@@ -436,23 +559,20 @@ export const AppProvider = ({ children }) => {
     });
   };
 
-  const addSmartLockData = (dcJson, deviceData) => {
-    if (deviceId < 300) {
-      deviceId = 300;
-    }
+  const addSmartLockData = (dcJson, deviceData, roomId) => {
     deviceData.subItems?.map((item) => {
-      let currentDeviceId = ++deviceId;
+      let currentDeviceId = smartLockId++;
       dcJson.smartBuildingDevices.lockingControllers.push({
         iD: currentDeviceId,
         displayName: item.name,
-        roomId: 5000,
+        roomId: roomId,
         isFeatured: true,
       });
       if (item.checked) {
         dcJson.smartBuildingDevices.doorbells.push({
-          iD: 100 + parseInt(currentDeviceId),
+          iD: doorbellId++,
           displayName: item.name + " Doorbell",
-          roomId: 5000,
+          roomId: roomId,
           smartLockId: currentDeviceId,
         });
       }
@@ -464,18 +584,23 @@ export const AppProvider = ({ children }) => {
       const payload = clearAll ? createEmptyHomeJSON() : createInitialDcJson();
       if (!clearAll) {
         const deviceHandlers = {
-          non_dimmable_light: (dcJson, data) =>
-            addLightData(dcJson, data, false),
-          dimmable_light: (dcJson, data) => addLightData(dcJson, data, true),
+          non_dimmable_light: (dcJson, data, roomId) =>
+            addLightData(dcJson, data, false, roomId),
+          dimmable_light: (dcJson, data, roomId) =>
+            addLightData(dcJson, data, true, roomId),
           sliding_door: addSlidingDoorData,
           garage_door: addGarageDoorData,
           smart_lock: addSmartLockData,
         };
-        devices.forEach((device) => {
-          const handler = deviceHandlers[device.type];
-          if (handler) {
-            handler(payload, device);
-          }
+
+        // Iterate through all rooms and their devices
+        rooms.forEach((room) => {
+          room.devices.forEach((device) => {
+            const handler = deviceHandlers[device.type];
+            if (handler) {
+              handler(payload, device, room.id);
+            }
+          });
         });
       }
 
@@ -487,7 +612,7 @@ export const AppProvider = ({ children }) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(payload),
-        }
+        },
       );
 
       const data = await response.json();
@@ -495,14 +620,16 @@ export const AppProvider = ({ children }) => {
         setAlertMessage(
           `Dummy home DC json ${
             clearAll ? "cleared" : "uploaded"
-          } successfully.`
+          } successfully.`,
         );
-        deviceId = 0;
+        resetDeviceIds();
         if (clearAll) {
-          setOriginalDevices(initialDevices);
-          setDevices(initialDevices);
+          const initialRooms = createInitialRooms();
+          setOriginalRooms(initialRooms);
+          setRooms(initialRooms);
+          setCurrentRoomId(1);
         } else {
-          setOriginalDevices(JSON.parse(JSON.stringify(devices)));
+          setOriginalRooms(JSON.parse(JSON.stringify(rooms)));
         }
       }
     } catch (error) {
@@ -515,11 +642,18 @@ export const AppProvider = ({ children }) => {
       value={{
         appData: {
           devices,
+          rooms,
+          currentRoomId,
+          currentRoom,
           hasChanges,
           handleCountChange,
           handleNameChange,
           handleCheckboxChange,
           handleSubmit,
+          addRoom,
+          deleteRoom,
+          editRoomName,
+          setCurrentRoomId,
         },
       }}
     >

@@ -1,6 +1,6 @@
 import React from "react";
 
-const AlertBox = ({ title, message, onClose }) => (
+const AlertBox = ({ title, message, onClose, onSave }) => (
   <div
     style={{
       position: "fixed",
@@ -41,35 +41,29 @@ const AlertBox = ({ title, message, onClose }) => (
         style={{
           fontSize: 16,
           color: "#d1d5db",
-          marginBottom: 24,
           lineHeight: 1.4,
         }}
       >
         {message}
       </div>
-      <button
-        onClick={onClose}
-        aria-label="Close"
-        style={{
-          background: "#30343c",
-          color: "#fff",
-          border: "none",
-          borderRadius: "8px",
-          padding: "12px 0",
-          width: 180,
-          fontWeight: 600,
-          fontSize: 17,
-          cursor: "pointer",
-          boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
-          transition: "background 0.2s",
-          margin: "0 auto",
-          display: "block",
-        }}
-        onMouseOver={(e) => (e.currentTarget.style.background = "#363a43")}
-        onMouseOut={(e) => (e.currentTarget.style.background = "#30343c")}
-      >
-        Close
-      </button>
+      <div className="flex flex-row justify-center gap-4">
+        <button
+          onClick={onClose}
+          aria-label="Close"
+          className="mt-6 bg-[#30343c] text-white border-none rounded-lg py-3 w-[180px] font-semibold text-[17px] cursor-pointer shadow-sm transition-colors duration-200 mx-auto block hover:bg-[#363a43]"
+        >
+          Close
+        </button>
+        {onSave ? (
+          <button
+            onClick={onSave}
+            aria-label="Close"
+            className="mt-6 bg-[#3b82f6] text-white border-none rounded-lg py-3 w-[180px] font-semibold text-[17px] cursor-pointer shadow-sm transition-colors duration-200 mx-auto block hover:bg-[#2563eb]"
+          >
+            Save
+          </button>
+        ) : null}
+      </div>
     </div>
   </div>
 );
