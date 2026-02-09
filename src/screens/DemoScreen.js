@@ -4,6 +4,7 @@ import React, { useMemo } from "react";
 import SmartLockCard from "@component/SmartLockCard";
 import DoorCard from "@component/DoorCard";
 import LightCard from "@component/LightCard";
+import ExhaustFanCard from "@component/ExhaustFanCard";
 import StickyDrawer from "@component/StickyDrawer";
 import { useAppData, lightTypeList, doorTypeList } from "@context/AppContext";
 
@@ -23,12 +24,17 @@ const DemoScreen = () => {
     () => devices.filter((device) => device.type === "smart_lock"),
     [devices],
   );
+  const exhaustFanDevices = useMemo(
+    () => devices.filter((device) => device.type === "exhaust_fan"),
+    [devices],
+  );
   const isAnySelected = useMemo(
     () =>
       lightDevices.some((device) => device.count > 0) ||
       doorDevices.some((device) => device.count > 0) ||
-      smartLockDevices.some((device) => device.count > 0),
-    [lightDevices, doorDevices, smartLockDevices],
+      smartLockDevices.some((device) => device.count > 0) ||
+      exhaustFanDevices.some((device) => device.count > 0),
+    [lightDevices, doorDevices, smartLockDevices, exhaustFanDevices],
   );
 
   return (
@@ -95,6 +101,16 @@ const DemoScreen = () => {
                   className="door-card-wrapper"
                 >
                   <SmartLockCard deviceDetails={device} index={index} />
+                </div>
+              )),
+            )}
+            {exhaustFanDevices.flatMap((device) =>
+              Array.from({ length: device.count }).map((_, index) => (
+                <div
+                  key={`${device.name}-${index}`}
+                  className="door-card-wrapper"
+                >
+                  <ExhaustFanCard deviceDetails={device} index={index} />
                 </div>
               )),
             )}

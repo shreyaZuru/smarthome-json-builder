@@ -55,6 +55,14 @@ const createInitialDevices = () => [
     subItems: [],
     maxDevices: 5,
   },
+  {
+    name: "Exhaust fan",
+    status: "Off",
+    count: 0,
+    type: "exhaust_fan",
+    subItems: [],
+    maxDevices: 5,
+  },
 ];
 
 const createInitialRooms = () => [
@@ -75,6 +83,7 @@ let slidingDoorId = 101; // 101-200
 let garageDoorId = 201; // 201-300
 let smartLockId = 301; // 301-400
 let doorbellId = 401; // 401-500
+let exhaustFanId = 600; // 600-605
 
 const resetDeviceIds = () => {
   lightGroupId = 1;
@@ -82,6 +91,7 @@ const resetDeviceIds = () => {
   garageDoorId = 201;
   smartLockId = 301;
   doorbellId = 401;
+  exhaustFanId = 600;
 };
 
 export const AppProvider = ({ children }) => {
@@ -175,6 +185,10 @@ export const AppProvider = ({ children }) => {
               tempDcJson,
               serverRoom.iD,
             );
+            const exhaustFanDevices = extractExhaustFanDevices(
+              tempDcJson,
+              serverRoom.iD,
+            );
 
             // Compose devices array in the same order as initialDevices
             const roomDevices = [
@@ -182,6 +196,7 @@ export const AppProvider = ({ children }) => {
               ...slidingDoorDevices,
               ...garageDoorDevices,
               ...smartLockDevices,
+              ...exhaustFanDevices,
             ];
 
             return {
@@ -342,6 +357,31 @@ export const AppProvider = ({ children }) => {
     return [smartLock];
   }
 
+  function extractExhaustFanDevices(dcJson, roomId = 5000) {
+    const exhaustFanController = dcJson?.smartBuildingDevices?.exhaustFan || [];
+    const exhaustFan = {
+      name: "Exhaust fan",
+      status: "Off",
+      count: 0,
+      type: "exhaust_fan",
+      subItems: [],
+      maxDevices: 5,
+    };
+
+    exhaustFanController
+      .filter((device) => device.roomId === roomId)
+      .forEach((device) => {
+        exhaustFan.subItems.push({
+          name: device.displayName || device.name,
+          type: "checkbox",
+          checked: false,
+        });
+      });
+
+    exhaustFan.count = exhaustFan.subItems.length;
+    return [exhaustFan];
+  }
+
   const handleCountChange = (deviceDetails, newCount) => {
     // Validate combined limits across ALL rooms before allowing the change
 
@@ -365,11 +405,6 @@ export const AppProvider = ({ children }) => {
       });
 
       if (totalLights > 40) {
-        const currentTotal =
-          totalLights -
-          newCount +
-          (currentRoom.devices.find((d) => d.name === deviceDetails.name)
-            ?.count || 0);
         setAlertMessage(
           `Total lights (dimmable + non-dimmable) across all rooms cannot exceed 40.`,
         );
@@ -397,11 +432,6 @@ export const AppProvider = ({ children }) => {
       });
 
       if (totalSlidingDoors > 20) {
-        const currentTotal =
-          totalSlidingDoors -
-          newCount +
-          (currentRoom.devices.find((d) => d.name === deviceDetails.name)
-            ?.count || 0);
         setAlertMessage(
           `Total sliding doors (2 panel + 3 panel) across all rooms cannot exceed 20.`,
         );
@@ -454,12 +484,32 @@ export const AppProvider = ({ children }) => {
       });
 
       if (totalSmartLocks > 5) {
-        const currentTotal =
-          totalSmartLocks -
-          newCount +
-          (currentRoom.devices.find((d) => d.name === deviceDetails.name)
-            ?.count || 0);
         setAlertMessage(`Total smart locks across all rooms cannot exceed 5.`);
+        return;
+      }
+    }
+
+    // Check exhaust fan limit across all rooms (max 5)
+    if (deviceDetails.type === "exhaust_fan") {
+      let totalExhaustFans = 0;
+      rooms.forEach((room) => {
+        room.devices.forEach((device) => {
+          if (device.type === "exhaust_fan") {
+            // If this is the device being changed, use newCount, otherwise use current count
+            if (
+              room.id === currentRoomId &&
+              device.name === deviceDetails.name
+            ) {
+              totalExhaustFans += newCount;
+            } else {
+              totalExhaustFans += device.count;
+            }
+          }
+        });
+      });
+
+      if (totalExhaustFans > 5) {
+        setAlertMessage(`Total exhaust fans across all rooms cannot exceed 5.`);
         return;
       }
     }
@@ -642,6 +692,7 @@ export const AppProvider = ({ children }) => {
       garageDoorController: [],
       lockingControllers: [],
       doorbells: [],
+      exhaustFan: [],
     },
   });
 
@@ -722,6 +773,19 @@ export const AppProvider = ({ children }) => {
     });
   };
 
+  const addExhaustFanData = (dcJson, deviceData, roomId) => {
+    deviceData.subItems?.map((item) => {
+      let currentDeviceId = exhaustFanId++;
+      dcJson.smartBuildingDevices.exhaustFan.push({
+        iD: currentDeviceId,
+        zoneId: 0,
+        displayName: item.name,
+        roomId: roomId,
+        isFeatured: true,
+      });
+    });
+  };
+
   const handleSubmit = async ({ clearAll = false } = {}) => {
     try {
       const payload = clearAll ? createEmptyHomeJSON() : createInitialDcJson();
@@ -734,6 +798,7 @@ export const AppProvider = ({ children }) => {
           sliding_door: addSlidingDoorData,
           garage_door: addGarageDoorData,
           smart_lock: addSmartLockData,
+          exhaust_fan: addExhaustFanData,
         };
 
         // Iterate through all rooms and their devices

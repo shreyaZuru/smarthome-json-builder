@@ -62,8 +62,8 @@ const StickyDrawer = () => {
 
   const handleDeleteRoom = (roomId) => {
     setDeletingRoomId(roomId);
-    setShowDeleteAlert(true);
-    setIsDropdownOpen(false);
+      setShowDeleteAlert(true);
+      setIsDropdownOpen(false);
   };
 
   const handleConfirmDelete = () => {
@@ -92,6 +92,21 @@ const StickyDrawer = () => {
 
   const getCurrentRoom = () => {
     return rooms.find((room) => room.id === currentRoomId);
+  };
+
+  const isClearAllDisabled = () => {
+    const roomCount = rooms.length;
+    let totalDevices = 0;
+    
+    // Count total devices across all rooms
+    rooms.forEach((room) => {
+      room.devices.forEach((device) => {
+        totalDevices += device.count;
+      });
+    });
+
+    // Disable when single room with no devices
+    return roomCount === 1 && totalDevices === 0;
   };
 
   const handleKeyPress = (e) => {
@@ -226,8 +241,9 @@ const StickyDrawer = () => {
 
       <div className="mt-6">
         <button
-          className="w-full py-2 px-4 bg-red-600 hover:bg-red-700 text-white font-medium rounded-md transition-colors"
+          className="w-full py-2 px-4 bg-red-600 hover:bg-red-700 disabled:bg-gray-500 disabled:cursor-not-allowed text-white font-medium rounded-md transition-colors"
           onClick={handleClearAll}
+          disabled={isClearAllDisabled()}
         >
           Clear All
         </button>
