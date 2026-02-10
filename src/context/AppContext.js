@@ -682,6 +682,7 @@ export const AppProvider = ({ children }) => {
       openingSystem: {
         slidingDoorDevices: [],
       },
+      exhaustFan: [],
     },
     smartSwitches: rooms.map((room, index) => ({
       iD: 1000 + room.id,
@@ -692,7 +693,6 @@ export const AppProvider = ({ children }) => {
       garageDoorController: [],
       lockingControllers: [],
       doorbells: [],
-      exhaustFan: [],
     },
   });
 
@@ -776,7 +776,7 @@ export const AppProvider = ({ children }) => {
   const addExhaustFanData = (dcJson, deviceData, roomId) => {
     deviceData.subItems?.map((item) => {
       let currentDeviceId = exhaustFanId++;
-      dcJson.smartBuildingDevices.exhaustFan.push({
+      dcJson.smartBuildingSystems.exhaustFan.push({
         iD: currentDeviceId,
         zoneId: 0,
         displayName: item.name,
